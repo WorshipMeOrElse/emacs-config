@@ -1,0 +1,387 @@
+* native configs
+** empty startup
+
+#+BEGIN_SRC emacs-lisp
+  (setq inhibit-startup-message t)
+  (setq initial-scratch-message nil)
+#+END_SRC
+
+** backup wizardry
+
+#+BEGIN_SRC emacs-lisp
+  (setq make-backup-files nil)
+  (setq buffer-file-name nil)
+  (setq backup-inhibited t)
+  (setq auto-save-default nil)
+#+END_SRC
+
+** remove bell
+
+#+BEGIN_SRC emacs-lisp
+  (setq ring-bell-function 'ignore)
+#+END_SRC
+
+** remove some ui
+
+#+BEGIN_SRC emacs-lisp
+  (menu-bar-mode -1)
+  (tool-bar-mode -1)
+  (scroll-bar-mode -1)
+#+END_SRC
+
+** remove org indenting
+
+#+BEGIN_SRC emacs-lisp
+  (setq org-src-preserve-indentation t)
+#+END_SRC
+
+* package preperations
+
+#+BEGIN_SRC emacs-lisp
+  (require 'package)
+
+  (setq package-archives '(("melpa" . "https://melpa.org/packages/")
+			   ("org" . "https://orgmode.org/elpa/")
+			   ("elpa" . "https://elpa.gnu.org/packages/")))
+
+  (package-initialize)
+  (unless package-archive-contents
+    (package-refresh-contents))
+
+    ;; Initialize use-package on non-Linux platforms
+  (unless (package-installed-p 'use-package)
+    (package-install 'use-package))
+
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+#+END_SRC
+
+* keybinds
+** evil
+
+#+BEGIN_SRC emacs-lisp
+(use-package evil
+  :init
+  (setq evil-want-integration t)
+  (setq evil-want-keybinding nil)
+  (setq evil-want-C-u-scroll t)
+  (setq evil-want-C-i-jump nil)
+  :config
+  (evil-mode 1)
+  (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
+  (define-key evil-insert-state-map (kbd "C-h") 'evil-delete-backward-char-and-join)
+
+  ;; Use visual line motions even outside of visual-line-mode buffers
+  (evil-global-set-key 'motion "j" 'evil-next-visual-line)
+  (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
+
+  (evil-set-initial-state 'messages-buffer-mode 'normal)
+  (evil-set-initial-state 'dashboard-mode 'normal)
+
+  (evil-set-undo-system 'undo-tree))
+#+END_SRC
+
+** evil collection
+
+#+BEGIN_SRC emacs-lisp
+(use-package evil-collection
+    :config (evil-collection-init '(dired org neotree elfeed magit)))
+#+END_SRC
+
+** general
+
+#+BEGIN_SRC emacs-lisp
+(use-package general
+  :config (general-evil-setup t))
+#+END_SRC
+
+* emacs helpers
+** orderless
+
+#+BEGIN_SRC emacs-lisp
+(use-package orderless
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+#+END_SRC
+
+** vertico
+
+#+BEGIN_SRC emacs-lisp
+(use-package vertico
+  :bind (:map vertico-map
+	      ("C-j" . vertico-next)
+	      ("C-k" . vertico-previous))
+  :init
+  (vertico-mode)
+  (setq vertico-count 10)
+  (setq vertico-cycle t))
+#+END_SRC
+
+** consult
+
+#+BEGIN_SRC emacs-lisp
+(use-package consult)
+
+(nvmap :prefix "SPC"
+       "c b"   '(consult-buffer :which-key "Consult yasnippet"))
+#+END_SRC
+
+** helpful
+
+#+BEGIN_SRC emacs-lisp
+(use-package helpful
+  :bind (("C-h f" . helpful-callable)
+	 ("C-h v" . helpful-variable)
+	 ("C-h k" . helpful-key)
+	 ("C-c C-d" . helpful-at-point)
+	 ("C-h F" . helpful-function)
+	 ("C-h C" . helpful-command)))
+#+END_SRC
+
+** neotree
+
+#+BEGIN_SRC emacs-lisp
+(use-package neotree
+  :config
+  (setq neo-smart-open t
+        neo-window-width 20
+        neo-theme (if (display-graphic-p) 'icons 'arrow)
+        ;;neo-window-fixed-size nil
+        inhibit-compacting-font-caches t
+        projectile-switch-project-action 'neotree-projectile-action) 
+        ;; truncate long file names in neotree
+        (add-hook 'neo-after-create-hook
+           #'(lambda (_)
+               (with-current-buffer (get-buffer neo-buffer-name)
+                 (setq truncate-lines t)
+                 (setq word-wrap nil)
+                 (make-local-variable 'auto-hscroll-mode)
+                 (setq auto-hscroll-mode nil)))))
+
+;; show hidden files
+(setq-default neo-show-hidden-files t)
+
+(nvmap :prefix "SPC"
+       "t n"   '(neotree-toggle :which-key "Toggle neotree file viewer")
+       "d n"   '(neotree-dir :which-key "Open directory in neotree"))
+#+END_SRC
+
+** which key
+
+#+BEGIN_SRC emacs-lisp
+(use-package which-key
+  :config (which-key-mode))
+#+END_SRC
+
+** marginalia
+
+#+BEGIN_SRC emacs-lisp
+(use-package marginalia
+  :init (marginalia-mode))
+#+END_SRC
+
+** undo tree
+#+BEGIN_SRC emacs-lisp
+(use-package undo-tree
+  :config (undo-tree-mode))
+#+END_SRC
+* aesthetics
+** themes
+
+#+BEGIN_SRC emacs-lisp
+(use-package doom-themes
+  :ensure t
+  :config
+  ;; Global settings (defaults)
+  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+        doom-themes-enable-italic t) ; if nil, italics is universally disabled
+  (load-theme 'doom-one t)
+
+  ;; Enable flashing mode-line on errors
+  (doom-themes-visual-bell-config)
+  ;; Enable custom neotree theme (all-the-icons must be installed!)
+  (doom-themes-neotree-config)
+  ;; or for treemacs users
+  (setq doom-themes-treemacs-theme "doom-atom") ; use "doom-colors" for less minimal icon theme
+  (doom-themes-treemacs-config)
+  ;; Corrects (and improves) org-mode's native fontification.
+  (doom-themes-org-config))
+#+END_SRC
+
+** font
+
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'default nil
+		    :font "JetBrainsMonoMedium Nerd Font"
+		    :weight 'medium)
+
+(use-package all-the-icons)
+#+END_SRC
+
+** modeline
+
+#+BEGIN_SRC emacs-lisp
+(use-package doom-modeline
+  :config (doom-modeline-mode 1))
+#+END_SRC
+
+* programming
+** yasnippet
+
+#+BEGIN_SRC emacs-lisp
+(use-package yasnippet
+  :init (add-to-list 'load-path "~/.emacs.d/snippets")
+  :config (yas-global-mode 1))
+
+(use-package consult-yasnippet)
+(nvmap :prefix "SPC"
+       "c y"   '(consult-yasnippet :which-key "Consult yasnippet"))
+#+END_SRC
+
+** corfu
+
+#+BEGIN_SRC emacs-lisp
+(global-unset-key (kbd "C-k"))
+
+(use-package corfu
+  :custom
+  (corfu-cycle t)
+  (corfu-auto t)
+  (corfu-auto-delay 0)
+  (corfu-auto-prefix 0)
+  (completion-styels '(basic))
+  (corfu-popupinfo-delay t)
+  (corfu-popupinfo-resize t)
+  :bind (:map corfu-map
+	      ("C-j" . corfu-next)
+	      ("C-k" . corfu-previous)
+	      ("C-e" . corfu-quit)
+	      :map evil-insert-state-map ("C-k" . nil))
+  :init
+  (global-corfu-mode)
+  (corfu-popupinfo-mode))
+#+END_SRC
+
+** kind icon
+
+#+BEGIN_SRC emacs-lisp
+(use-package kind-icon
+  :after corfu
+  :custom
+  (kind-icon-default-face 'corfu-default) ; to compute blended backgrounds correctly
+  :config
+  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
+#+END_SRC
+
+** eglot
+
+#+BEGIN_SRC emacs-lisp
+(use-package eglot)
+#+END_SRC
+
+** flycheck
+
+#+BEGIN_SRC emacs-lisp
+(use-package flycheck
+  :config (global-flycheck-mode))
+
+; (nvmap :prefix "SPC"
+;      "f c"   '(flycheck-command-map :which-key "Flycheck"))
+#+END_SRC
+
+** treesitter
+
+#+BEGIN_SRC emacs-lisp
+(use-package tree-sitter
+  :hook (eglot-connect . tree-sitter-hl-mode)
+  :config (global-tree-sitter-mode))
+(use-package tree-sitter-langs)
+#+END_SRC
+
+** languages
+
+#+BEGIN_SRC emacs-lisp
+(use-package lua-mode
+  :mode "\\.lua\\'")
+
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs
+               `(lua-mode . ("~/.emacs.d/lsp/robloxlsp/server/bin/Windows/lua-language-server"))))
+
+(flycheck-define-checker selene
+  "raw blocks pensive face"
+  :command ("selene" "--quiet" "--config" "C:\\Users\\seanj\\AppData\\Roaming\\.emacs.d\\custom-dependencies\\selene.toml" source)
+  :error-patterns ((error line-start (file-name) ":" line ":" column ": " (message) line-end))
+  :modes lua-mode)
+
+(setq-default flycheck-checkers '(selene))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(use-package typescript-mode
+  :mode "\\.ts\\'")
+
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs
+               `(typescript-mode . ("typescript-language-server" "--stdio"))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp
+(use-package web-mode
+  :mode "\\.tsx\\'")
+
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs
+               `(web-mode . ("typescript-language-server" "--stdio"))))
+#+END_SRC
+
+** google this
+#+BEGIN_SRC emacs-lisp
+(use-package google-this
+  :config
+  (google-this-mode 1))
+
+(nvmap :prefix "SPC"
+       "g t"   '(google-this-mode-submap :which-key "Google This"))
+#+END_SRC
+
+** magit
+
+#+BEGIN_SRC emacs-lisp
+(use-package magit)
+#+END_SRC
+
+* elfeed
+
+#+BEGIN_SRC emacs-lisp
+(use-package elfeed
+  :config (setq elfeed-feeds
+		'(
+		  ; coryxkenshin
+		  "https://www.youtube.com/feeds/videos.xml?channel_id=UCiYcA0gJzg855iSKMrX3oHg"
+		  ; lex fridman podcast
+		  "https://www.youtube.com/feeds/videos.xml?channel_id=UCSHZKyawb77ixDdsGog4iWA"))
+  (setq-default elfeed-search-filter "@6-months-ago "))
+#+END_SRC
+
+* org
+** org roam
+
+#+BEGIN_SRC emacs-lisp
+(use-package org-roam
+  :custom (org-roam-directory "C:\\Users\\seanj\\OneDrive\\Documents\\Studies\\org-mode")
+  :config
+  ;; If you're using a vertical completion framework, you might want a more informative completion interface
+  (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+  (org-roam-db-autosync-mode))
+#+END_SRC
+
+** org bullets
+
+#+BEGIN_SRC emacs-lisp
+(use-package org-bullets
+  :custom
+  (org-bullets-bullet-list '("" "" "" "" "" "" ""))
+  :hook (org-mode . org-bullets-mode))
+#+END_SRC

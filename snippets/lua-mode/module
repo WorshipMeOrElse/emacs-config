@@ -1,0 +1,12 @@
+# -*- mode: snippet -*-
+# name: module
+# key: <m
+# --
+
+local $1 = {}
+
+function $1:$2()
+$0
+end
+
+return $1
