@@ -1,38 +1,77 @@
-* native configs
-** empty startup
+* native 
+** remove startup and scratch 
 
 #+BEGIN_SRC emacs-lisp
-  (setq inhibit-startup-message t)
-  (setq initial-scratch-message nil)
+(setq inhibit-startup-message t) 
+(setq initial-scratch-message nil) 
 #+END_SRC
 
-** backup wizardry
+** get rid of backup files 
 
-#+BEGIN_SRC emacs-lisp
-  (setq make-backup-files nil)
-  (setq buffer-file-name nil)
-  (setq backup-inhibited t)
-  (setq auto-save-default nil)
-#+END_SRC
+#+BEGIN_SRC emacs-lisp 
+(setq make-backup-files nil) 
+(setq buffer-file-name nil) 
+(setq backup-inhibited t) 
+(setq auto-save-default nil) 
+#+END_SRC 
 
-** remove bell
+** remove bell 
 
-#+BEGIN_SRC emacs-lisp
-  (setq ring-bell-function 'ignore)
-#+END_SRC
+#+BEGIN_SRC emacs-lisp 
+(setq ring-bell-function nil) 
+#+END_SRC 
 
-** remove some ui
+** remove default gui 
 
-#+BEGIN_SRC emacs-lisp
-  (menu-bar-mode -1)
-  (tool-bar-mode -1)
-  (scroll-bar-mode -1)
-#+END_SRC
+#+BEGIN_SRC emacs-lisp 
+(menu-bar-mode -1) 
+(tool-bar-mode -1) 
+(scroll-bar-mode -1) 
+#+END_SRC 
 
-** remove org indenting
+** tab width 
 
-#+BEGIN_SRC emacs-lisp
-  (setq org-src-preserve-indentation t)
+#+BEGIN_SRC emacs-lisp 
+(setq-default tab-width 2) 
+#+END_SRC 
+
+** get rid of org source indenting 
+
+#+BEGIN_SRC emacs-lisp 
+(setq org-src-preserve-indentation t) 
+#+END_SRC 
+
+** electric pair mode 
+
+#+BEGIN_SRC emacs-lisp 
+(setq electric-pair-pairs 
+'((?\" . ?\")
+ (?\' . ?\')
+ (?\( . ?\))
+ (?\[ . ?\])
+ (?\{ . ?\})
+ (?\< . ?\>)))
+
+ (electric-pair-mode 1) 
+#+END_SRC 
+
+** auto revert mode 
+
+#+BEGIN_SRC emacs-lisp 
+(global-auto-revert-mode 1) 
+#+END_SRC 
+
+** garbage collection 
+
+#+BEGIN_SRC emacs-lisp 
+  ; set it to a super high number for lower rates of garbage collection and faster startup 
+  (setq gc-cons-threshold (* 50 1000 1000)) 
+#+END_SRC 
+
+** line numbers 
+
+#+BEGIN_SRC emacs-lisp 
+(add-hook 'prog-mode-hook #'display-line-numbers-mode)
 #+END_SRC
 
 * package preperations
@@ -66,6 +105,8 @@
   (setq evil-want-keybinding nil)
   (setq evil-want-C-u-scroll t)
   (setq evil-want-C-i-jump nil)
+	:custom
+	(evil-window-split-below t)
   :config
   (evil-mode 1)
   (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
@@ -78,21 +119,62 @@
   (evil-set-initial-state 'messages-buffer-mode 'normal)
   (evil-set-initial-state 'dashboard-mode 'normal)
 
-  (evil-set-undo-system 'undo-tree))
+  (evil-set-undo-system 'undo-redo))
 #+END_SRC
 
 ** evil collection
 
 #+BEGIN_SRC emacs-lisp
 (use-package evil-collection
-    :config (evil-collection-init '(dired org neotree elfeed magit)))
+	:after evil
+		:config (evil-collection-init
+						 '(dired
+							 org
+							 neotree
+							 elfeed
+							 magit
+							 dashboard
+							 dired-sidebar
+							 eshell
+							 ibuffer)))
 #+END_SRC
 
 ** general
 
 #+BEGIN_SRC emacs-lisp
 (use-package general
-  :config (general-evil-setup t))
+	:commands (nvmap)
+		:config (general-evil-setup t))
+#+END_SRC
+
+** hydra
+
+#+BEGIN_SRC emacs-lisp
+ (use-package hydra
+	 :commands (defhydra))
+
+(defhydra hydra-evil-scale ()
+	"evil scale"
+	("h" evil-window-decrease-width "decrease width")
+	("l" evil-window-increase-width "increase width") 
+	("j" evil-window-decrease-height "decrease height")
+	("k" evil-window-increase-height "increase height"))
+
+(defhydra hydra-evil-move ()
+	"evil move window"
+	("h" evil-window-left "move left")
+	("l" evil-window-right "move right")
+	("j" evil-window-down "move down")
+	("k" evil-window-up "move up")
+
+	("H" evil-window-move-far-left "move pane left")
+	("L" evil-window-move-far-right "move pane right") 
+	("J" evil-window-move-very-bottom "move pane down")
+	("K" evil-window-move-very-top "move pane up"))
+
+(nvmap :prefix "SPC"
+  "e w s"   '(hydra-evil-scale/body :which-key "Evil window scale")
+  "e w m"   '(hydra-evil-move/body :which-key "Evil window move"))
 #+END_SRC
 
 * emacs helpers
@@ -100,20 +182,22 @@
 
 #+BEGIN_SRC emacs-lisp
 (use-package orderless
-  :custom
-  (completion-styles '(orderless basic))
-  (completion-category-overrides '((file (styles basic partial-completion)))))
+	:commands (vertico-mode)
+		:custom
+		(completion-styles '(orderless basic))
+		(completion-category-overrides '((file (styles basic partial-completion)))))
 #+END_SRC
 
 ** vertico
 
 #+BEGIN_SRC emacs-lisp
 (use-package vertico
+	:commands (execute-extended-command)
   :bind (:map vertico-map
 	      ("C-j" . vertico-next)
 	      ("C-k" . vertico-previous))
   :init
-  (vertico-mode)
+	(vertico-mode)
   (setq vertico-count 10)
   (setq vertico-cycle t))
 #+END_SRC
@@ -121,16 +205,18 @@
 ** consult
 
 #+BEGIN_SRC emacs-lisp
-(use-package consult)
+(use-package consult
+	:commands (vertico-mode))
 
 (nvmap :prefix "SPC"
-       "c b"   '(consult-buffer :which-key "Consult yasnippet"))
+       "c b"   '(consult-buffer :which-key "Consult buffer"))
 #+END_SRC
 
 ** helpful
 
 #+BEGIN_SRC emacs-lisp
 (use-package helpful
+	:commands (helpful-callable helpful-variable helpful-key helpful-at-point helpful-function helpful-command)
   :bind (("C-h f" . helpful-callable)
 	 ("C-h v" . helpful-variable)
 	 ("C-h k" . helpful-key)
@@ -139,59 +225,43 @@
 	 ("C-h C" . helpful-command)))
 #+END_SRC
 
-** neotree
-
-#+BEGIN_SRC emacs-lisp
-(use-package neotree
-  :config
-  (setq neo-smart-open t
-        neo-window-width 20
-        neo-theme (if (display-graphic-p) 'icons 'arrow)
-        ;;neo-window-fixed-size nil
-        inhibit-compacting-font-caches t
-        projectile-switch-project-action 'neotree-projectile-action) 
-        ;; truncate long file names in neotree
-        (add-hook 'neo-after-create-hook
-           #'(lambda (_)
-               (with-current-buffer (get-buffer neo-buffer-name)
-                 (setq truncate-lines t)
-                 (setq word-wrap nil)
-                 (make-local-variable 'auto-hscroll-mode)
-                 (setq auto-hscroll-mode nil)))))
-
-;; show hidden files
-(setq-default neo-show-hidden-files t)
-
-(nvmap :prefix "SPC"
-       "t n"   '(neotree-toggle :which-key "Toggle neotree file viewer")
-       "d n"   '(neotree-dir :which-key "Open directory in neotree"))
-#+END_SRC
-
 ** which key
 
 #+BEGIN_SRC emacs-lisp
-(use-package which-key
-  :config (which-key-mode))
+	(use-package which-key
+		:config (which-key-mode))
 #+END_SRC
 
 ** marginalia
 
 #+BEGIN_SRC emacs-lisp
 (use-package marginalia
+	:commands (vertico-mode)
   :init (marginalia-mode))
 #+END_SRC
 
-** undo tree
+** beacon
+
 #+BEGIN_SRC emacs-lisp
-(use-package undo-tree
-  :config (undo-tree-mode))
+(use-package beacon
+	:defer
+  :config (beacon-mode 1))
 #+END_SRC
+
+** restart emacs
+
+#+BEGIN_SRC emacs-lisp
+(use-package restart-emacs)
+
+(nvmap :prefix "SPC"
+  "r e"   '(restart-emacs :which-key "Restart emacs"))
+#+END_SRC
+
 * aesthetics
 ** themes
 
 #+BEGIN_SRC emacs-lisp
 (use-package doom-themes
-  :ensure t
   :config
   ;; Global settings (defaults)
   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
@@ -223,7 +293,38 @@
 
 #+BEGIN_SRC emacs-lisp
 (use-package doom-modeline
+	:after doom-themes
   :config (doom-modeline-mode 1))
+#+END_SRC
+
+** nyan cat
+
+#+BEGIN_SRC emacs-lisp
+(use-package nyan-mode
+  :after doom-modeline
+  :config
+  (setq nyan-bar-length 15
+	nyan-wavy-trail t)
+  (nyan-mode)
+  (nyan-start-animation))
+#+END_SRC
+
+** dashboard
+
+#+BEGIN_SRC emacs-lisp
+(use-package dashboard
+  :config (dashboard-setup-startup-hook))
+#+END_SRC
+
+** darkroom
+
+#+BEGIN_SRC emacs-lisp
+(use-package darkroom
+	:commands (darkroom-mode)
+	:custom (darkroom-text-scale-increase 1))
+
+(nvmap :prefix "SPC"
+       "d m"   '(darkroom-mode :which-key "Darkroom mode"))
 #+END_SRC
 
 * programming
@@ -231,10 +332,13 @@
 
 #+BEGIN_SRC emacs-lisp
 (use-package yasnippet
+	:defer
   :init (add-to-list 'load-path "~/.emacs.d/snippets")
-  :config (yas-global-mode 1))
+	:config (yas-global-mode))
 
-(use-package consult-yasnippet)
+(use-package consult-yasnippet
+	:commands (consult-yasnippet))
+
 (nvmap :prefix "SPC"
        "c y"   '(consult-yasnippet :which-key "Consult yasnippet"))
 #+END_SRC
@@ -259,15 +363,15 @@
 	      ("C-e" . corfu-quit)
 	      :map evil-insert-state-map ("C-k" . nil))
   :init
-  (global-corfu-mode)
-  (corfu-popupinfo-mode))
+  (corfu-popupinfo-mode)
+	:hook (prog-mode . corfu-mode))
 #+END_SRC
 
 ** kind icon
 
 #+BEGIN_SRC emacs-lisp
 (use-package kind-icon
-  :after corfu
+	:commands (corfu-mode)
   :custom
   (kind-icon-default-face 'corfu-default) ; to compute blended backgrounds correctly
   :config
@@ -277,26 +381,28 @@
 ** eglot
 
 #+BEGIN_SRC emacs-lisp
-(use-package eglot)
+(use-package eglot
+	:hook (prog-mode . eglot-ensure))
 #+END_SRC
 
 ** flycheck
 
 #+BEGIN_SRC emacs-lisp
 (use-package flycheck
-  :config (global-flycheck-mode))
+	:hook (prog-mode . flycheck-mode))
 
-; (nvmap :prefix "SPC"
-;      "f c"   '(flycheck-command-map :which-key "Flycheck"))
+ (nvmap :prefix "SPC"
+      "f c"   '(flycheck-command-map :which-key "Flycheck"))
 #+END_SRC
 
 ** treesitter
 
 #+BEGIN_SRC emacs-lisp
 (use-package tree-sitter
-  :hook (eglot-connect . tree-sitter-hl-mode)
-  :config (global-tree-sitter-mode))
-(use-package tree-sitter-langs)
+  :hook (prog-mode . tree-sitter-hl-mode))
+
+(use-package tree-sitter-langs
+	:commands (tree-sitter-langs-install-grammars))
 #+END_SRC
 
 ** languages
@@ -337,25 +443,57 @@
 #+END_SRC
 
 ** google this
+
 #+BEGIN_SRC emacs-lisp
 (use-package google-this
-  :config
-  (google-this-mode 1))
+	:commands (google-this))
 
 (nvmap :prefix "SPC"
-       "g t"   '(google-this-mode-submap :which-key "Google This"))
+       "g t"   '(google-this :which-key "Google This"))
 #+END_SRC
 
 ** magit
 
 #+BEGIN_SRC emacs-lisp
-(use-package magit)
+(use-package magit
+	:commands magit-status)
+
+(nvmap :prefix "SPC"
+  "m s"   '(magit-status :which-key "Magit statue"))
+#+END_SRC
+
+** cape
+
+#+BEGIN_SRC emacs-lisp
+(use-package cape
+	:defer
+  :init
+  (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+  (add-to-list 'completion-at-point-functions #'cape-file)
+  (add-to-list 'completion-at-point-functions #'cape-symbol))
+#+END_SRC
+
+** format all
+
+#+BEGIN_SRC emacs-lisp
+(use-package format-all
+	:custom
+	(format-all-default-formatters
+	 '(("Lua" stylua)))
+	:hook (format-all-mode . format-all-ensure-formatter)
+	      (before-save . format-all-buffer)
+				(prog-mode . format-all-mode))
+
+(nvmap :prefix "SPC"
+  "f a"   '(format-all-buffer :which-key "Format buffer"))
 #+END_SRC
 
 * elfeed
 
 #+BEGIN_SRC emacs-lisp
 (use-package elfeed
+	:commands (elfeed)
+	:hook (elfeed . elfeed-update)
   :config (setq elfeed-feeds
 		'(
 		  ; coryxkenshin
@@ -366,10 +504,18 @@
 #+END_SRC
 
 * org
+** org itself
+
+#+BEGIN_SRC emacs-lisp
+(use-package org
+	:config (setq org-ellipsis " ▾"))
+#+END_SRC
+
 ** org roam
 
 #+BEGIN_SRC emacs-lisp
 (use-package org-roam
+	:after org
   :custom (org-roam-directory "C:\\Users\\seanj\\OneDrive\\Documents\\Studies\\org-mode")
   :config
   ;; If you're using a vertical completion framework, you might want a more informative completion interface
@@ -384,4 +530,61 @@
   :custom
   (org-bullets-bullet-list '("" "" "" "" "" "" ""))
   :hook (org-mode . org-bullets-mode))
+#+END_SRC
+
+* dired
+** all the icons
+
+#+BEGIN_SRC emacs-lisp
+(use-package all-the-icons-dired
+	:hook (dired-mode . all-the-icons-dired-mode))
+#+END_SRC
+
+** dired sidebar
+
+#+BEGIN_SRC emacs-lisp
+(use-package dired-sidebar
+	:commands (dired-sidebar-toggle-sidebar))
+
+(nvmap :prefix "SPC"
+       "d s"   '(dired-sidebar-toggle-sidebar :which-key "Dired sidebar"))
+#+END_SRC
+
+* eshell
+** open keybind
+
+#+BEGIN_SRC emacs-lisp
+(defun open-eshell-below ()
+	(interactive)
+
+	(window-resize
+	 (select-window
+		(split-window)) 3)
+
+	(evil-window-decrease-height 10)
+	(eshell))
+
+(nvmap :prefix "SPC"
+  "e s"   '(open-eshell-below :which-key "Open eshell"))
+#+END_SRC
+
+** eshell up
+
+#+BEGIN_SRC emacs-lisp
+; basically command is like eshell-up [directory] and not cd .. over and over
+(use-package eshell-up)
+#+END_SRC
+
+* custom shit
+** kill other buffers
+
+#+BEGIN_SRC emacs-lisp
+(defun kill-other-buffers ()
+  "Kill all buffers but the current one.
+Doesn't mess with special buffers."
+  (interactive)
+  (when (y-or-n-p "Are you sure you want to kill all buffers but the current one? ")
+    (seq-each
+     #'kill-buffer
+     (delete (current-buffer) (seq-filter #'buffer-file-name (buffer-list))))))
 #+END_SRC

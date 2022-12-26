@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: general keybind
+# key: <gk
+# --
+
+(nvmap :prefix "SPC"
+       "$1"   '($2 :which-key "$3"))
+			 $0
